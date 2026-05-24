@@ -112,15 +112,18 @@ pipeline {
                             if(fileExists("${svc}/pom.xml")){
                                 dir(svc) {
                                     echo "==> OWASP scan: ${svc}"
-                                    sh """
-                                java --version
+                                    withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]){
+                                        sh """
+                                            java --version
                                 mvn -B org.owasp:dependency-check-maven:check \
                                     -DfailBuildOnCVSS=7 \
                                     -Dformats=HTML,JSON \
                                     -DsuppressionFile=../dependency-check-suppressions.xml \
-                                    -DnvdApiKey=${NVD_API_KEY}
+                                    -DnvdApiKey=$NVD_API_KEY \
                                     --no-transfer-progress
                             """
+                                    }
+
                                 }
                             }else{
                                 echo "Avertissement: LE dossier ou le projet Maven pour '${svc}' n'existe pas. Etape ignoree."
