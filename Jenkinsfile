@@ -93,7 +93,7 @@ pipeline {
                             dir(svc) {
                                 echo "==> OWASP scan: ${svc}"
                                 sh """
-                                mvn -B org.owasp:dependency-check-maven:check \
+                                jave --version &&mvn -B org.owasp:dependency-check-maven:check \
                                     -DfailBuildOnCVSS=7 \
                                     -Dformats=HTML,JSON \
                                     -DsuppressionFile=../dependency-check-suppressions.xml \
