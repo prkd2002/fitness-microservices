@@ -26,7 +26,7 @@ pipeline {
         REGISTRY           = 'docker.io'
         REGISTRY_NAMESPACE = 'pkatjs'
         IMAGE_TAG          = "${params.IMAGE_TAG ?: "build-${env.BUILD_NUMBER}"}"
-        SERVICES           = 'activityservice aiservice configserver eureka gateway iuserservice'
+        SERVICES           = 'activityservice aiservice configserver eureka gateway userservice'
 
         SONAR_HOST_URL    = 'http://sonarqube:9000'
         SONAR_PROJECT_KEY = 'fitness-microservices'
