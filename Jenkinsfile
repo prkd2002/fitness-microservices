@@ -106,9 +106,10 @@ pipeline {
                     withEnv(["PATH+MAEN=${mavenHome}/bin", "PATH+JDK=${resolvedJavaHome}/bin", "JAVA_HOME=${resolvedJavaHome}"]) {
                         def serviceList = env.SERVICES.split(' ')
                         serviceList.each { svc ->
-                            dir(svc) {
-                                echo "==> OWASP scan: ${svc}"
-                                sh """
+                            if(fileExists("${svc}/pom.xml")){
+                                dir(svc) {
+                                    echo "==> OWASP scan: ${svc}"
+                                    sh """
                                 java --version
                                 mvn -B org.owasp:dependency-check-maven:check \
                                     -DfailBuildOnCVSS=7 \
@@ -116,7 +117,11 @@ pipeline {
                                     -DsuppressionFile=../dependency-check-suppressions.xml \
                                     --no-transfer-progress
                             """
+                                }
+                            }else{
+                                echo "Avertissement: LE dossier ou le projet Maven pour '${svc}' n'existe pas. Etape ignoree."
                             }
+
                         }
 
                     }
