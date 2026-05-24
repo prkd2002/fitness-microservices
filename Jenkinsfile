@@ -87,7 +87,7 @@ pipeline {
                     def jdkHome = tool name: 'JDK-26', type: 'jdk'
 
 
-                    withEnv(["PATH+MAVEN=${mavenHome}/bin", "PATH+JDK=${jdkHome}/bin", "JAVA_HOME=${jdkHome}"]) {
+                    withEnv(["PATH+MVN=${mavenHome}/bin", "PATH+JDK=${jdkHome}/bin", "JAVA_HOME=${jdkHome}"]) {
                         def serviceList = env.SERVICES.split(' ')
                         serviceList.each { svc ->
                             dir(svc) {
