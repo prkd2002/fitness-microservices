@@ -86,8 +86,24 @@ pipeline {
                     def mavenHome = tool name: 'Maven-3.9', type: 'maven'
                     def jdkHome = tool name: 'JDK-26', type: 'jdk'
 
+                    def resolvedJavaHome = sh(
+                            returnStdout: true,
+                            script: """
+                            # Cherche java dans le PATH déjà enrichi par tool()
+                            JAVA_BIN=\$(which java 2>/dev/null || echo "")
+                            if [ -z "\$JAVA_BIN" ]; then
+                                # Fallback : cherche dans le répertoire retourné par tool()
+                                JAVA_BIN=\$(find ${jdkHome} -name java -type f | head -1)
+                            fi
+                            # Remonte de bin/java → répertoire racine du JDK
+                            dirname \$(dirname \$(readlink -f "\$JAVA_BIN"))
+                        """
+                    ).trim()
 
-                    withEnv(["PATH+MAEN=${mavenHome}/bin", "PATH+JDK=${jdkHome}/bin", "JAVA_HOME=${jdkHome}"]) {
+                    echo "==> JAVA_HOME résolu : \${resolvedJavaHome}"
+
+
+                    withEnv(["PATH+MAEN=${mavenHome}/bin", "PATH+JDK=${resolvedJavaHome}/bin", "JAVA_HOME=${resolvedJavaHome}"]) {
                         def serviceList = env.SERVICES.split(' ')
                         serviceList.each { svc ->
                             dir(svc) {
