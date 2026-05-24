@@ -37,6 +37,9 @@ pipeline {
         TRIVY_SEVERITY  = 'CRITICAL,HIGH'
         TRIVY_EXIT_CODE = '1'
 
+
+        NVD_API_KEY = credentials('nvd-api-key')
+
         // ⚠️ Ne jamais exposer les valeurs — Jenkins masque ces variables dans les logs
         SONAR_TOKEN = credentials('sonarqube-token')
 
@@ -115,6 +118,7 @@ pipeline {
                                     -DfailBuildOnCVSS=7 \
                                     -Dformats=HTML,JSON \
                                     -DsuppressionFile=../dependency-check-suppressions.xml \
+                                    -DnvdApiKey=${NVD_API_KEY}
                                     --no-transfer-progress
                             """
                                 }
