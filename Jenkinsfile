@@ -87,13 +87,14 @@ pipeline {
                     def jdkHome = tool name: 'JDK-26', type: 'jdk'
 
 
-                    withEnv(["PATH+MVN=${mavenHome}/bin", "PATH+JDK=${jdkHome}/bin", "JAVA_HOME=${jdkHome}"]) {
+                    withEnv(["PATH+MAEN=${mavenHome}/bin", "PATH+JDK=${jdkHome}/bin", "JAVA_HOME=${jdkHome}"]) {
                         def serviceList = env.SERVICES.split(' ')
                         serviceList.each { svc ->
                             dir(svc) {
                                 echo "==> OWASP scan: ${svc}"
                                 sh """
-                                java --version &&mvn -B org.owasp:dependency-check-maven:check \
+                                java --version
+                                mvn -B org.owasp:dependency-check-maven:check \
                                     -DfailBuildOnCVSS=7 \
                                     -Dformats=HTML,JSON \
                                     -DsuppressionFile=../dependency-check-suppressions.xml \
