@@ -83,19 +83,27 @@ pipeline {
         stage('🔍 OWASP Dependency-Check') {
             steps {
                 script {
-                    def serviceList = env.SERVICES.split(' ')
-                    serviceList.each { svc ->
-                        dir(svc) {
-                            echo "==> OWASP scan: ${svc}"
-                            sh """
+                    def mavenHome = tool name: 'Maven-3.9', type: 'maven'
+                    def jdkHome = tool name: 'JDK-26', type: 'jdk'
+
+
+                    withEnv(["PATH+MAVEN=${mavenHome}/bin", "PATH+JDK=${jdkHome}/bin", "JAVA_HOME=${jdkHome}"]) {
+                        def serviceList = env.SERVICES.split(' ')
+                        serviceList.each { svc ->
+                            dir(svc) {
+                                echo "==> OWASP scan: ${svc}"
+                                sh """
                                 mvn -B org.owasp:dependency-check-maven:check \
                                     -DfailBuildOnCVSS=7 \
                                     -Dformats=HTML,JSON \
                                     -DsuppressionFile=../dependency-check-suppressions.xml \
                                     --no-transfer-progress
                             """
+                            }
                         }
+
                     }
+
                 }
             }
             post {
