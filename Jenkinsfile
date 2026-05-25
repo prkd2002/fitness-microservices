@@ -167,25 +167,41 @@ pipeline {
                 script {
                     def serviceList = env.SERVICES.split(' ')
                     def stages = [:]
+                    def mavenHome = tool name: 'Maven-3.9', type: 'maven'
+                    def jdkHome = tool name: 'JDK-26', type: 'jdk'
+                    def resolvedJavaHome = sh(
+                            returnStdout: true,
+                            script: """
+                            # Cherche java dans le PATH déjà enrichi par tool()
+                            JAVA_BIN=\$(which java 2>/dev/null || echo "")
+                            if [ -z "\$JAVA_BIN" ]; then
+                                # Fallback : cherche dans le répertoire retourné par tool()
+                                JAVA_BIN=\$(find ${jdkHome} -name java -type f | head -1)
+                            fi
+                            # Remonte de bin/java → répertoire racine du JDK
+                            dirname \$(dirname \$(readlink -f "\$JAVA_BIN"))
+                        """
+                    ).trim()
 
-                    serviceList.each { svc ->
-                        def svcName = svc  // variable locale pour la closure
-                        stages["${svcName}"] = {
-                            dir(svcName) {
+                    withEnv(["PATH+MAEN=${mavenHome}/bin", "PATH+JDK=${resolvedJavaHome}/bin", "JAVA_HOME=${resolvedJavaHome}"]) {
+                        serviceList.each { svc ->
+                            def svcName = svc  // variable locale pour la closure
+                            stages["${svcName}"] = {
+                                dir(svcName) {
 
-                                // 3a. Compilation + tests unitaires
-                                echo "==> [${svcName}] Build & Tests"
-                                sh """
+                                    // 3a. Compilation + tests unitaires
+                                    echo "==> [${svcName}] Build & Tests"
+                                    sh """
                                     mvn -B clean package \
                                         -DskipTests=${params.SKIP_TESTS} \
                                         -Dmaven.test.failure.ignore=false \
                                         --no-transfer-progress
                                 """
 
-                                // 3b. Analyse SonarQube avec clé unique par service
-                                echo "==> [${svcName}] SonarQube analysis"
-                                withSonarQubeEnv('SonarQube-Server') {
-                                    sh """
+                                    // 3b. Analyse SonarQube avec clé unique par service
+                                    echo "==> [${svcName}] SonarQube analysis"
+                                    withSonarQubeEnv('SonarQube-Server') {
+                                        sh """
                                         mvn -B sonar:sonar \
                                             -Dsonar.projectKey=${env.SONAR_PROJECT_KEY}:${svcName} \
                                             -Dsonar.projectName="Fitness - ${svcName}" \
@@ -198,26 +214,32 @@ pipeline {
                                             -Dsonar.sourceEncoding=UTF-8 \
                                             --no-transfer-progress
                                     """
-                                }
+                                    }
 
-                                // 3c. Quality Gate individuel (timeout 5 min par service)
-                                echo "==> [${svcName}] Waiting for Quality Gate"
-                                timeout(time: 5, unit: 'MINUTES') {
-                                    def qg = waitForQualityGate abortPipeline: false
-                                    if (qg.status != 'OK') {
-                                        if (params.FORCE_DEPLOY) {
-                                            unstable("⚠️ [${svcName}] Quality Gate ${qg.status} — FORCE_DEPLOY activé")
+                                    // 3c. Quality Gate individuel (timeout 5 min par service)
+                                    echo "==> [${svcName}] Waiting for Quality Gate"
+                                    timeout(time: 5, unit: 'MINUTES') {
+                                        def qg = waitForQualityGate abortPipeline: false
+                                        if (qg.status != 'OK') {
+                                            if (params.FORCE_DEPLOY) {
+                                                unstable("⚠️ [${svcName}] Quality Gate ${qg.status} — FORCE_DEPLOY activé")
+                                            } else {
+                                                error("❌ [${svcName}] Quality Gate échoué: ${qg.status}")
+                                            }
                                         } else {
-                                            error("❌ [${svcName}] Quality Gate échoué: ${qg.status}")
+                                            echo "✅ [${svcName}] Quality Gate OK"
                                         }
-                                    } else {
-                                        echo "✅ [${svcName}] Quality Gate OK"
                                     }
                                 }
                             }
                         }
+
+                        parallel stages
+
                     }
-                    parallel stages
+
+
+
                 }
             }
             post {
